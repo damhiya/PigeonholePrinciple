@@ -31,8 +31,8 @@ record Shrinked {n : ℕ} (f : Fin (suc (suc n)) → Fin (suc n)) : Set where
   constructor shrinked
   field
     ϕ : Fin (suc n) → Fin n
-    perm  : Fin n → Fin (suc n)
-    perm∘ϕ≡f∘suc : ∀ x → (perm ∘ ϕ) x ≡ (f ∘ suc) x
+    punch  : Fin n → Fin (suc n)
+    punch∘ϕ≡f∘suc : ∀ x → (punch ∘ ϕ) x ≡ (f ∘ suc) x
   
 Pigeonhole1 : (n : ℕ) → Set
 Pigeonhole1 n = ∀ (f : Fin (suc n) → Fin n) → NonInjective f
@@ -89,7 +89,7 @@ find-collision {n} f = result
     ... | inj₂ fsx≢fz   = inj₂ λ x → fsx≢fz x (x≤n x)
   
 shrink : ∀ {n} {y} (f : Fin (suc (suc n)) → Fin (suc n)) → (∀ x → f (suc x) ≢ y) → Shrinked f
-shrink {n} {y} f f'x≢y = {!!}
+shrink {n} {y} f f'x≢y = shrinked ϕ punch punch∘ϕ≡f∘suc
   where
     ϕ' : (x : Fin (suc n)) → f (suc x) ≢ y → Fin n
     ϕ' x f'x≢y with f (suc x) | (F.<-cmp (f (suc x)) y)
@@ -99,6 +99,12 @@ shrink {n} {y} f f'x≢y = {!!}
 
     ϕ : Fin (suc n) → Fin n
     ϕ x = ϕ' x (f'x≢y x)
+
+    punch  : Fin n → Fin (suc n)
+    punch = {!!}
+
+    punch∘ϕ≡f∘suc : ∀ x → (punch ∘ ϕ) x ≡ (f ∘ suc) x
+    punch∘ϕ≡f∘suc = {!!}
 
 pigeonhole1 : ∀ n → Pigeonhole1 n
 pigeonhole1 0 f = ⊥-elim (¬Fin0 (f zero))
@@ -128,7 +134,7 @@ pigeonhole1 (suc n) f with find-collision f
 
         fx'≡fy' : f x' ≡ f y'
         fx'≡fy' = begin
-          f x'         ≡˘⟨ perm∘ϕ≡f∘suc x ⟩
-          (perm ∘ ϕ) x ≡⟨ cong perm ϕx≡ϕy ⟩
-          (perm ∘ ϕ) y ≡⟨ perm∘ϕ≡f∘suc y ⟩
+          f x'         ≡˘⟨ punch∘ϕ≡f∘suc x ⟩
+          (punch ∘ ϕ) x ≡⟨ cong punch ϕx≡ϕy ⟩
+          (punch ∘ ϕ) y ≡⟨ punch∘ϕ≡f∘suc y ⟩
           f y'         ∎
