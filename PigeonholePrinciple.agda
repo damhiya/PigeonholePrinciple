@@ -6,11 +6,11 @@ open import Relation.Binary.Definitions
 open import Function.Base
 open import Data.Empty
 open import Data.Product
-open import Data.Sum renaming (_⊎_ to _∨_)
+open import Data.Sum
 open import Data.Nat.Base as ℕ
 open import Data.Nat.Properties as ℕ hiding (_≟_)
-open import Data.Fin.Base as F
-open import Data.Fin.Properties as F
+open import Data.Fin.Base as F hiding (punchIn; punchOut)
+open import Data.Fin.Properties as F hiding (punchIn-punchOut)
 
 record NonInjective {A B : Set} (f : A → B) : Set where
   constructor collision
@@ -30,7 +30,7 @@ record Shrinked {n : ℕ} (f : Fin (suc (suc n)) → Fin (suc n)) : Set where
 Pigeonhole1 : (n : ℕ) → Set
 Pigeonhole1 n = ∀ (f : Fin (suc n) → Fin n) → NonInjective f
 
-find-collision : ∀ {n} (f : Fin (suc (suc n)) → Fin (suc n)) → NonInjective f ∨ (∀ x → f (suc x) ≢ f zero)
+find-collision : ∀ {n} (f : Fin (suc (suc n)) → Fin (suc n)) → NonInjective f ⊎ (∀ x → f (suc x) ≢ f zero)
 find-collision {n} f = result
   where
     fz : Fin (suc n)
@@ -51,7 +51,7 @@ find-collision {n} f = result
     x≤m⇒x≡m∨x≤m-1 x m-1 m-1<n x≤m f g | tri≈ _ x≡m _ | fromℕ<-toℕ-x≡m | fromℕ<-toℕ-x≡x = f (trans (sym fromℕ<-toℕ-x≡x) fromℕ<-toℕ-x≡m)
     x≤m⇒x≡m∨x≤m-1 x m-1 m-1<n x≤m f g | tri> _ _ x>m = ⊥-elim (<⇒≱ x>m x≤m)
   
-    test : ∀ (m : ℕ) → (m ℕ.≤ n) → NonInjective f ∨ (∀ (x : Fin (suc n)) → toℕ x ℕ.≤ m → f (suc x) ≢ fz)
+    test : ∀ (m : ℕ) → (m ℕ.≤ n) → NonInjective f ⊎ (∀ (x : Fin (suc n)) → toℕ x ℕ.≤ m → f (suc x) ≢ fz)
     test zero _ with fz ≟ f (suc zero)
     ... | yes fz≡fsz = inj₁ (collision zero (suc zero) z≢sz fz≡fsz)
     ... | no  fz≢fsz = inj₂ (λ x x≤z fsx≡fz → fz≢fsz (trans (sym fsx≡fz) (cong (f ∘ suc) (≤z x x≤z))))
@@ -63,17 +63,40 @@ find-collision {n} f = result
         (λ x≡m → fz≢fsm (trans (sym fsx≡fz) (cong (f ∘ suc) x≡m)))
         (λ x≤m-1 → fsx≢fz x x≤m-1 fsx≡fz))
 
-    test-n : NonInjective f ∨ (∀ x → toℕ x ℕ.≤ n → f (suc x) ≢ fz)
+    test-n : NonInjective f ⊎ (∀ x → toℕ x ℕ.≤ n → f (suc x) ≢ fz)
     test-n = test n ℕ.≤-refl
 
     x≤n : ∀ (x : Fin (suc n)) → toℕ x ℕ.≤ n
     x≤n x with toℕ<n x
     ... | s≤s p = p
     
-    result : NonInjective f ∨ (∀ x → f (suc x) ≢ fz)
+    result : NonInjective f ⊎ (∀ x → f (suc x) ≢ fz)
     result with test-n
     ... | inj₁ noninj-f = inj₁ noninj-f
     ... | inj₂ fsx≢fz   = inj₂ λ x → fsx≢fz x (x≤n x)
+
+punchOut : ∀ {n} {i j : Fin (suc n)} → i ≢ j → Fin n
+punchOut               {i = zero}    {j = zero}    i≢j with i≢j refl
+... | ()
+punchOut               {i = zero}    {j = suc j-1} i≢j = j-1
+punchOut {n = zero   } {i = suc () } {j = zero}    i≢j
+punchOut {n = suc n-1} {i = suc i-1} {j = zero}    i≢j = zero
+punchOut {n = zero   } {i = suc () } {j = suc j-1} i≢j
+punchOut {n = suc n-1} {i = suc i-1} {j = suc j-1} i≢j = suc (punchOut (λ i-1≡j-1 → i≢j (cong suc i-1≡j-1)))
+  
+punchIn : ∀ {n} (i : Fin (suc n)) (j : Fin n) → Fin (suc n)
+punchIn zero      j = suc j
+punchIn (suc i-1) zero = zero
+punchIn (suc i-1) (suc j-1) = suc (punchIn i-1 j-1)
+
+punchIn-punchOut : ∀ {n} {i j : Fin (suc n)} → (i≢j : i ≢ j) → punchIn i (punchOut i≢j) ≡ j
+punchIn-punchOut {i = zero} {j = zero} i≢j with i≢j refl
+... | ()
+punchIn-punchOut {i = zero} {j = suc j-1} i≢j = refl
+punchIn-punchOut {n = zero}    {i = suc () } {j = zero} i≢j
+punchIn-punchOut {n = suc n-1} {i = suc i-1} {j = zero} i≢j = refl
+punchIn-punchOut {n = zero}    {i = suc () } {j = suc j-1} i≢j
+punchIn-punchOut {n = suc n-1} {i = suc i-1} {j = suc j-1} i≢j = cong suc (punchIn-punchOut (λ i-1≡j-1 → i≢j (cong suc i-1≡j-1)))
   
 shrink : ∀ {n} {y} (f : Fin (suc (suc n)) → Fin (suc n)) → (∀ x → f (suc x) ≢ y) → Shrinked f
 shrink {n} {y} f f'x≢y = shrinked ϕ punch punch∘ϕ≡f∘suc
